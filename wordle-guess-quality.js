@@ -9,14 +9,23 @@ function includesAll(haystack, needles) {
     return true;
 }
 
-function calculateGuessQuality() {
+function getRows() {
     const gameAppDocument = document.getElementsByTagName("game-app")[0].shadowRoot;
     const board = gameAppDocument.getElementById("board");
-    const rows = board.getElementsByTagName("game-row");
+    const rowDocuments = board.getElementsByTagName("game-row");
+    const result = [];
+
+    for (let row of rowDocuments) {
+        result.push(row.shadowRoot.querySelector("div.row"));
+    }
+
+    return result;
+}
+
+function calculateGuessQuality() {
     let wordsleft = wordlist.slice(0);
 
-    for (let rowDocument of rows) {
-        const row = rowDocument.shadowRoot.querySelector("div.row");
+    for (let row of getRows()) {
         let regex = "";
         let absent = "";
         let present = [];
@@ -40,21 +49,38 @@ function calculateGuessQuality() {
             wordsleft = wordsleft.filter(w => w.match(regex) && includesAll(w, present));
 
             const rowRect = row.getBoundingClientRect();
-            const div = document.createElement("div");
+            let div = row.querySelector("div.guessQuality");
+            if (div === null) {
+                div = document.createElement("div");
+                div.className = "guessQuality";
+                div.style.position = "fixed";
+                div.style.left = `${rowRect.right + 10}px`;
+                div.style.top = `${rowRect.top}px`;
+                div.style.height = `${rowRect.bottom - rowRect.top}px`;
+                div.style["line-height"] = div.style.height;
+                div.style.color = "var(--key-text-color)";
+                row.appendChild(div);
+            }
 
             div.innerText = wordsleft.length;
-            div.style.position = "fixed";
-            div.style.left = `${rowRect.right + 10}px`;
-            div.style.top = `${rowRect.top}px`;
-            div.style.height = `${rowRect.bottom - rowRect.top}px`;
-            div.style["line-height"] = `${rowRect.bottom - rowRect.top}px`;
-            div.style.color = "var(--key-text-color)";
-            row.appendChild(div);
-            console.log(regex, present, wordsleft.length, rowRect);
         }
     }
 }
 
-//window.addEventListener("keydown", () => {
-    setTimeout(calculateGuessQuality, 1000);
-//});
+function resizeElements() {
+    for (let row of getRows()) {
+        const div = row.querySelector("div.guessQuality");
+
+        if (div !== null) {
+            const rowRect = row.getBoundingClientRect();
+            div.style.left = `${rowRect.right + 10}px`;
+            div.style.top = `${rowRect.top}px`;
+            div.style.height = `${rowRect.bottom - rowRect.top}px`;
+            div.style["line-height"] = div.style.height;
+        }
+    }
+}
+
+window.addEventListener("load", calculateGuessQuality);
+window.addEventListener("resize", resizeElements);
+window.addEventListener("keydown", () => { setTimeout(calculateGuessQuality, 0); });
