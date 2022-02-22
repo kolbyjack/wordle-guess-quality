@@ -3,7 +3,7 @@
     "description": "Show the number of words left after each guess",
     "version": "1.0",
     "manifest_version": 3,
-    "permissions": [
+    "host_permissions": [
         "https://www.nytimes.com/games/wordle/*"
     ],
     "content_scripts": [
