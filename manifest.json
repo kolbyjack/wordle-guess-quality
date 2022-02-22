@@ -1,0 +1,15 @@
+{
+    "name": "Wordle Guess Quality",
+    "description": "Show the number of words left after each guess",
+    "version": "1.0",
+    "manifest_version": 3,
+    "permissions": [
+        "https://www.nytimes.com/games/wordle/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": ["https://www.nytimes.com/games/wordle/*"],
+            "js": ["wordle-guess-quality.js"]
+        }
+    ]
+}
