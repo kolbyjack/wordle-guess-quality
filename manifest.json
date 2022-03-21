@@ -1,8 +1,13 @@
 {
-    "name": "Wordle Guess Quality",
-    "description": "Show the number of words left after each guess",
-    "version": "1.0",
     "manifest_version": 3,
+    "name": "Wordle Guess Quality",
+    "version": "1.1",
+
+    "description": "Show the number of words left after each guess",
+    "icons": {
+        "128": "icon.png"
+    },
+
     "host_permissions": [
         "https://www.nytimes.com/games/wordle/*"
     ],

@@ -28,6 +28,7 @@ function calculateGuessQuality() {
     let guessesleft = guesslist.slice(0);
 
     for (let row of getRows()) {
+        let guess = "";
         let regex = "";
         let absent = "";
         let present = [];
@@ -44,9 +45,11 @@ function calculateGuessQuality() {
             } else if (evaluation === "correct") {
                 regex += letter;
             }
+            guess += letter;
         }
 
         if (regex.length > 5) {
+            const guessmark = (answerlist.indexOf(guess) !== -1) ? "" : "*"
             regex = new RegExp(regex.replaceAll("%absent%", absent));
             answersleft = answersleft.filter(w => w.match(regex) && includesAll(w, present));
             guessesleft = guessesleft.filter(w => w.match(regex) && includesAll(w, present));
@@ -65,7 +68,7 @@ function calculateGuessQuality() {
                 row.appendChild(div);
             }
 
-            div.innerText = `${answersleft.length} (${answersleft.length + guessesleft.length})`;
+            div.innerText = `${answersleft.length} (${answersleft.length + guessesleft.length}) ${guessmark}`;
         }
     }
 }
