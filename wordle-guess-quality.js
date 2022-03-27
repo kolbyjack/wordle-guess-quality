@@ -794,23 +794,27 @@ function calculateGuessQuality() {
     for (let row of getRows()) {
         let guess = "";
         let regex = "";
-        let absent = "";
+        let absent = [];
         let present = [];
+        let correct = [];
 
         for (let tile of row.querySelectorAll("game-tile")) {
             const evaluation = tile.getAttribute("evaluation");
             const letter = tile.getAttribute("letter");
             if (evaluation === "absent") {
                 regex += "[^%absent%]";
-                absent += letter;
+                absent.push(letter);
             } else if (evaluation === "present") {
                 regex += `[^%absent%${letter}]`;
                 present.push(letter);
             } else if (evaluation === "correct") {
                 regex += letter;
+                correct.push(letter);
             }
             guess += letter;
         }
+
+        absent = absent.filter(letter => !(present.includes(letter) || correct.includes(letter))).join("");
 
         if (regex.length > 5) {
             const guessmark = (answerlist.indexOf(guess) !== -1) ? "" : "*"
