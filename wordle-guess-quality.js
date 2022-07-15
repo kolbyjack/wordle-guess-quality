@@ -1,3 +1,97 @@
+function includesAll(haystack, needles) {
+    for (let needle of needles) {
+        if (!haystack.includes(needle)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function getRows() {
+    const gameAppDocument = document.getElementsByTagName("game-app")[0].shadowRoot;
+    const board = gameAppDocument.getElementById("board");
+    const rowDocuments = board.getElementsByTagName("game-row");
+    const result = [];
+
+    for (let row of rowDocuments) {
+        result.push(row.shadowRoot.querySelector("div.row"));
+    }
+
+    return result;
+}
+
+function calculateGuessQuality() {
+    let answersleft = answerlist.slice(0);
+    let guessesleft = guesslist.slice(0);
+
+    for (let row of getRows()) {
+        let guess = "";
+        let regex = "";
+        let absent = [];
+        let present = [];
+        let correct = [];
+
+        for (let tile of row.querySelectorAll("game-tile")) {
+            const evaluation = tile.getAttribute("evaluation");
+            const letter = tile.getAttribute("letter");
+            if (evaluation === "absent") {
+                regex += "[^%absent%]";
+                absent.push(letter);
+            } else if (evaluation === "present") {
+                regex += `[^%absent%${letter}]`;
+                present.push(letter);
+            } else if (evaluation === "correct") {
+                regex += letter;
+                correct.push(letter);
+            }
+            guess += letter;
+        }
+
+        absent = absent.filter(letter => !(present.includes(letter) || correct.includes(letter))).join("");
+
+        if (regex.length > 5) {
+            const guessmark = (answerlist.indexOf(guess) !== -1) ? "" : "*"
+            regex = new RegExp(regex.replaceAll("%absent%", absent));
+            answersleft = answersleft.filter(w => w.match(regex) && includesAll(w, present));
+            guessesleft = guessesleft.filter(w => w.match(regex) && includesAll(w, present));
+
+            const rowRect = row.getBoundingClientRect();
+            let div = row.querySelector("div.guessQuality");
+            if (div === null) {
+                div = document.createElement("div");
+                div.className = "guessQuality";
+                div.style.position = "fixed";
+                div.style.left = `${rowRect.right + 10}px`;
+                div.style.top = `${rowRect.top}px`;
+                div.style.height = `${rowRect.bottom - rowRect.top}px`;
+                div.style["line-height"] = div.style.height;
+                div.style.color = "var(--key-text-color)";
+                row.appendChild(div);
+            }
+
+            div.innerText = `${answersleft.length} (${answersleft.length + guessesleft.length}) ${guessmark}`;
+        }
+    }
+}
+
+function resizeElements() {
+    for (let row of getRows()) {
+        const div = row.querySelector("div.guessQuality");
+
+        if (div !== null) {
+            const rowRect = row.getBoundingClientRect();
+            div.style.left = `${rowRect.right + 10}px`;
+            div.style.top = `${rowRect.top}px`;
+            div.style.height = `${rowRect.bottom - rowRect.top}px`;
+            div.style["line-height"] = div.style.height;
+        }
+    }
+}
+
+window.addEventListener("load", calculateGuessQuality);
+window.addEventListener("resize", resizeElements);
+window.addEventListener("keydown", () => { setTimeout(calculateGuessQuality, 0); });
+
 const answerlist = ["cigar", "rebut", "sissy", "humph", "awake", "blush", "focal", "evade", "naval", "serve", "heath", "dwarf", "model", "karma", "stink",
     "grade", "quiet", "bench", "abate", "feign", "major", "death", "fresh", "crust", "stool", "colon", "abase", "marry", "react", "batty", "pride", "floss",
     "helix", "croak", "staff", "paper", "unfed", "whelp", "trawl", "outdo", "adobe", "crazy", "sower", "repay", "digit", "crate", "cluck", "spike", "mimic",
@@ -765,96 +859,3 @@ const guesslist = ["aahed", "aalii", "aargh", "aarti", "abaca", "abaci", "abacs"
     "zurfs", "zuzim", "zygal", "zygon", "zymes", "zymic"
 ];
 
-function includesAll(haystack, needles) {
-    for (let needle of needles) {
-        if (!haystack.includes(needle)) {
-            return false;
-        }
-    }
-    return true;
-}
-
-function getRows() {
-    const gameAppDocument = document.getElementsByTagName("game-app")[0].shadowRoot;
-    const board = gameAppDocument.getElementById("board");
-    const rowDocuments = board.getElementsByTagName("game-row");
-    const result = [];
-
-    for (let row of rowDocuments) {
-        result.push(row.shadowRoot.querySelector("div.row"));
-    }
-
-    return result;
-}
-
-function calculateGuessQuality() {
-    let answersleft = answerlist.slice(0);
-    let guessesleft = guesslist.slice(0);
-
-    for (let row of getRows()) {
-        let guess = "";
-        let regex = "";
-        let absent = [];
-        let present = [];
-        let correct = [];
-
-        for (let tile of row.querySelectorAll("game-tile")) {
-            const evaluation = tile.getAttribute("evaluation");
-            const letter = tile.getAttribute("letter");
-            if (evaluation === "absent") {
-                regex += "[^%absent%]";
-                absent.push(letter);
-            } else if (evaluation === "present") {
-                regex += `[^%absent%${letter}]`;
-                present.push(letter);
-            } else if (evaluation === "correct") {
-                regex += letter;
-                correct.push(letter);
-            }
-            guess += letter;
-        }
-
-        absent = absent.filter(letter => !(present.includes(letter) || correct.includes(letter))).join("");
-
-        if (regex.length > 5) {
-            const guessmark = (answerlist.indexOf(guess) !== -1) ? "" : "*"
-            regex = new RegExp(regex.replaceAll("%absent%", absent));
-            answersleft = answersleft.filter(w => w.match(regex) && includesAll(w, present));
-            guessesleft = guessesleft.filter(w => w.match(regex) && includesAll(w, present));
-
-            const rowRect = row.getBoundingClientRect();
-            let div = row.querySelector("div.guessQuality");
-            if (div === null) {
-                div = document.createElement("div");
-                div.className = "guessQuality";
-                div.style.position = "fixed";
-                div.style.left = `${rowRect.right + 10}px`;
-                div.style.top = `${rowRect.top}px`;
-                div.style.height = `${rowRect.bottom - rowRect.top}px`;
-                div.style["line-height"] = div.style.height;
-                div.style.color = "var(--key-text-color)";
-                row.appendChild(div);
-            }
-
-            div.innerText = `${answersleft.length} (${answersleft.length + guessesleft.length}) ${guessmark}`;
-        }
-    }
-}
-
-function resizeElements() {
-    for (let row of getRows()) {
-        const div = row.querySelector("div.guessQuality");
-
-        if (div !== null) {
-            const rowRect = row.getBoundingClientRect();
-            div.style.left = `${rowRect.right + 10}px`;
-            div.style.top = `${rowRect.top}px`;
-            div.style.height = `${rowRect.bottom - rowRect.top}px`;
-            div.style["line-height"] = div.style.height;
-        }
-    }
-}
-
-window.addEventListener("load", calculateGuessQuality);
-window.addEventListener("resize", resizeElements);
-window.addEventListener("keydown", () => { setTimeout(calculateGuessQuality, 0); });
