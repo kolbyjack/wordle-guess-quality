@@ -7,6 +7,14 @@ function includesAll(haystack, needles) {
     return true;
 }
 
+function getWordleState() {
+    try {
+        return JSON.parse(localStorage.getItem("nyt-wordle-state"));
+    } catch {
+        return null;
+    }
+}
+
 function findBoard() {
     for (let div of document.getElementsByTagName("div")) {
         if (div.className.startsWith("Board-module_board_")) {
@@ -14,7 +22,6 @@ function findBoard() {
         }
     }
 
-    console.error("Unable to find board in page");
     return null;
 }
 
@@ -30,38 +37,34 @@ function getRows() {
         }
     }
 
-    if (result.length !== 6) {
-        console.error("Failed to find all rows:", result);
-    }
     return result;
 }
 
 function calculateGuessQuality() {
-    let answersleft = answerlist.slice(0);
-    let guessesleft = guesslist.slice(0);
-    const rows = getRows();
-
-    if (rows.length !== 6) {
-        setTimeout(calculateGuessQuality, 100);
-        return;
+    const wordleState = getWordleState();
+    if (wordleState === null) {
+        return true;
     }
 
-    for (let row of rows) {
+    const rows = getRows();
+    if (rows.length !== 6) {
+        return false;
+    }
+
+    let answersleft = answerlist.slice(0);
+    let guessesleft = guesslist.slice(0);
+    for (let row = 0; row < wordleState.rowIndex; ++row) {
         let guess = "";
         let regex = "";
         let absent = [];
         let present = [];
         let correct = [];
 
-        for (let tileContainer of row.children) {
-            const tile = tileContainer.firstChild;
-            const evaluation = tile.getAttribute("data-state");
-            const letter = tile.innerText.toLowerCase();
+        for (let col = 0; col < 5; ++col) {
+            const evaluation = wordleState.evaluations[row][col];
+            const letter = wordleState.boardState[row][col];
 
-            if (evaluation === "tbd") {
-                setTimeout(calculateGuessQuality, 100);
-                return;
-            } else if (evaluation === "absent") {
+            if (evaluation === "absent") {
                 regex += "[^%absent%]";
                 absent.push(letter);
             } else if (evaluation === "present") {
@@ -82,8 +85,8 @@ function calculateGuessQuality() {
             answersleft = answersleft.filter(w => w.match(regex) && includesAll(w, present));
             guessesleft = guessesleft.filter(w => w.match(regex) && includesAll(w, present));
 
-            const rowRect = row.getBoundingClientRect();
-            let div = row.querySelector("div.guessQuality");
+            const rowRect = rows[row].getBoundingClientRect();
+            let div = rows[row].querySelector("div.guessQuality");
             if (div === null) {
                 div = document.createElement("div");
                 div.className = "guessQuality";
@@ -93,12 +96,14 @@ function calculateGuessQuality() {
                 div.style.height = `${rowRect.bottom - rowRect.top}px`;
                 div.style["line-height"] = div.style.height;
                 div.style.color = "var(--key-text-color)";
-                row.appendChild(div);
+                rows[row].appendChild(div);
             }
 
             div.innerText = `${answersleft.length} (+${guessesleft.length}) ${guessmark}`;
         }
     }
+
+    return true;
 }
 
 function resizeElements() {
@@ -115,7 +120,13 @@ function resizeElements() {
     }
 }
 
-window.addEventListener("load", calculateGuessQuality);
+function calculateInitialState() {
+    if (!calculateGuessQuality()) {
+        setTimeout(calculateInitialState, 250);
+    }
+}
+
+window.addEventListener("load", calculateInitialState);
 window.addEventListener("resize", resizeElements);
 window.addEventListener("keydown", () => { setTimeout(calculateGuessQuality, 0); });
 
