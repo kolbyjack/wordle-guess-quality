@@ -7,34 +7,61 @@ function includesAll(haystack, needles) {
     return true;
 }
 
-function getRows() {
-    const gameAppDocument = document.getElementsByTagName("game-app")[0].shadowRoot;
-    const board = gameAppDocument.getElementById("board");
-    const rowDocuments = board.getElementsByTagName("game-row");
-    const result = [];
-
-    for (let row of rowDocuments) {
-        result.push(row.shadowRoot.querySelector("div.row"));
+function findBoard() {
+    for (let div of document.getElementsByTagName("div")) {
+        if (div.className.startsWith("Board-module_board_")) {
+            return div;
+        }
     }
 
+    console.error("Unable to find board in page");
+    return null;
+}
+
+function getRows() {
+    const board = findBoard();
+    const result = [];
+
+    if (board !== null) {
+        for (let row of board.children) {
+            if (row.className.startsWith("Row-module_row_")) {
+                result.push(row);
+            }
+        }
+    }
+
+    if (result.length !== 6) {
+        console.error("Failed to find all rows:", result);
+    }
     return result;
 }
 
 function calculateGuessQuality() {
     let answersleft = answerlist.slice(0);
     let guessesleft = guesslist.slice(0);
+    const rows = getRows();
 
-    for (let row of getRows()) {
+    if (rows.length !== 6) {
+        setTimeout(calculateGuessQuality, 100);
+        return;
+    }
+
+    for (let row of rows) {
         let guess = "";
         let regex = "";
         let absent = [];
         let present = [];
         let correct = [];
 
-        for (let tile of row.querySelectorAll("game-tile")) {
-            const evaluation = tile.getAttribute("evaluation");
-            const letter = tile.getAttribute("letter");
-            if (evaluation === "absent") {
+        for (let tileContainer of row.children) {
+            const tile = tileContainer.firstChild;
+            const evaluation = tile.getAttribute("data-state");
+            const letter = tile.innerText.toLowerCase();
+
+            if (evaluation === "tbd") {
+                setTimeout(calculateGuessQuality, 100);
+                return;
+            } else if (evaluation === "absent") {
                 regex += "[^%absent%]";
                 absent.push(letter);
             } else if (evaluation === "present") {
@@ -69,7 +96,7 @@ function calculateGuessQuality() {
                 row.appendChild(div);
             }
 
-            div.innerText = `${answersleft.length} (${answersleft.length + guessesleft.length}) ${guessmark}`;
+            div.innerText = `${answersleft.length} (+${guessesleft.length}) ${guessmark}`;
         }
     }
 }
