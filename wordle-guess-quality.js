@@ -1,8 +1,10 @@
 function includesAll(haystack, needles) {
     for (let needle of needles) {
-        if (!haystack.includes(needle)) {
+        const needleIndex = haystack.indexOf(needle);
+        if (needleIndex < 0) {
             return false;
         }
+        haystack = haystack.slice(0, needleIndex) + haystack.slice(needleIndex + 1);
     }
     return true;
 }
