@@ -1,3 +1,9 @@
+function retry(func, period) {
+    if (!func()) {
+        setTimeout(() => { retry(func, period); }, period);
+    }
+}
+
 function includesAll(haystack, needles) {
     for (let needle of needles) {
         const needleIndex = haystack.indexOf(needle);
@@ -122,13 +128,63 @@ function resizeElements() {
     }
 }
 
-function calculateInitialState() {
-    if (!calculateGuessQuality()) {
-        setTimeout(calculateInitialState, 250);
+function bindShareClick() {
+    const button = document.getElementById("share-button");
+    if (button === null) {
+        return false;
     }
+
+    button.addEventListener("click", () => {
+        setTimeout(() => {
+            navigator.clipboard.readText()
+            .then((text) => {
+                const lines = text.split("\r\n");
+                if (lines.length > 2 && lines[0].startsWith("Wordle") && lines[1].length === 0) {
+                    const statistics = document.getElementsByClassName("guessQuality");
+
+                    for (let i = 2; i + 1 < lines.length; ++i) {
+                        lines[i] += " " + statistics[i - 2].innerText;
+                    }
+
+                    navigator.clipboard.writeText(lines.join("\r\n"));
+                }
+            })
+            .catch((e) => {
+                console.error(e);
+            })
+        }, 100);
+    });
+
+    return true;
 }
 
-window.addEventListener("load", calculateInitialState);
+function bindStatisticsClick() {
+    const button = document.getElementById("statistics-button");
+    if (button === null) {
+        return false;
+    }
+
+    button.addEventListener("click", () => {
+        setTimeout(bindShareClick, 100);
+    });
+
+    return true;
+}
+
+function onPageLoad() {
+    if (!calculateGuessQuality()) {
+        return false;
+    }
+
+    retry(bindStatisticsClick, 250);
+    if (getWordleState().gameStatus !== "IN_PROGRESS") {
+        retry(bindShareClick, 250);
+    }
+
+    return true;
+}
+
+window.addEventListener("load", () => { retry(onPageLoad, 250); });
 window.addEventListener("resize", resizeElements);
 window.addEventListener("keydown", () => { setTimeout(calculateGuessQuality, 0); });
 
