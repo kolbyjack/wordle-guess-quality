@@ -1,3 +1,5 @@
+"use strict";
+
 function retry(func, period) {
     if (!func()) {
         setTimeout(() => { retry(func, period); }, period);
@@ -93,9 +95,9 @@ function calculateGuessQuality() {
             answersleft = answersleft.filter(w => w.match(regex) && includesAll(w, present));
             guessesleft = guessesleft.filter(w => w.match(regex) && includesAll(w, present));
 
-            const rowRect = rows[row].getBoundingClientRect();
             let div = rows[row].querySelector("div.guessQuality");
             if (div === null) {
+                const rowRect = rows[row].getBoundingClientRect();
                 div = document.createElement("div");
                 div.className = "guessQuality";
                 div.style.position = "fixed";
@@ -158,35 +160,45 @@ function bindShareClick() {
     return true;
 }
 
-function bindStatisticsClick() {
-    const button = document.getElementById("statistics-button");
-    if (button === null) {
-        return false;
+function containsShareButton(node) {
+    if (node.id === "share-button") {
+        return true;
     }
 
-    button.addEventListener("click", () => {
-        setTimeout(bindShareClick, 100);
-    });
+    for (let child of node.childNodes) {
+        if (containsShareButton(child)) {
+            return true;
+        }
+    }
 
-    return true;
+    return false;
 }
 
-function onPageLoad() {
-    if (!calculateGuessQuality()) {
-        return false;
+function onPageChanged(changes) {
+    if (guessQualityTimer === null) {
+        guessQualityTimer = setTimeout(() => {
+            calculateGuessQuality();
+            guessQualityTimer = null;
+        }, 100);
     }
 
-    retry(bindStatisticsClick, 250);
-    if (getWordleState().gameStatus !== "IN_PROGRESS") {
-        retry(bindShareClick, 250);
+    for (let change of changes) {
+        for (let node of change.addedNodes) {
+            if (containsShareButton(node)) {
+                retry(bindShareClick, 250);
+                return;
+            }
+        }
     }
-
-    return true;
 }
 
-window.addEventListener("load", () => { retry(onPageLoad, 250); });
+window.addEventListener("load", () => { retry(calculateGuessQuality, 250); });
 window.addEventListener("resize", resizeElements);
-window.addEventListener("keydown", () => { setTimeout(calculateGuessQuality, 0); });
+
+const mutationObserver = new MutationObserver(onPageChanged);
+mutationObserver.observe(document.body, { attributes: true, childList: true, subtree: true });
+
+let guessQualityTimer = null;
 
 const answerlist = ["cigar", "rebut", "sissy", "humph", "awake", "blush", "focal", "evade", "naval", "serve", "heath", "dwarf", "model", "karma", "stink",
     "grade", "quiet", "bench", "abate", "feign", "major", "death", "fresh", "crust", "stool", "colon", "abase", "marry", "react", "batty", "pride", "floss",
