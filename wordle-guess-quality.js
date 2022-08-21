@@ -75,7 +75,7 @@ function calculateGuessQuality() {
             const letter = wordleState.boardState[row][col];
 
             if (evaluation === "absent") {
-                regex += "[^%absent%]";
+                regex += `[^%absent%${letter}]`;
                 absent.push(letter);
             } else if (evaluation === "present") {
                 regex += `[^%absent%${letter}]`;
