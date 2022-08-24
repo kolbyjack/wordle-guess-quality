@@ -87,7 +87,7 @@ function calculateGuessQuality() {
             guess += letter;
         }
 
-        absent = absent.filter(letter => !(present.includes(letter) || correct.includes(letter))).join("");
+        absent = absent.filter(letter => !present.includes(letter)).join("");
 
         if (regex.length > 5) {
             const guessmark = (answerlist.indexOf(guess) !== -1) ? "" : "*"
@@ -109,7 +109,10 @@ function calculateGuessQuality() {
                 rows[row].appendChild(div);
             }
 
-            div.innerText = `${answersleft.length} (+${guessesleft.length}) ${guessmark}`;
+            const text = `${answersleft.length} (+${guessesleft.length}) ${guessmark}`.trim();
+            if (div.innerText !== text) {
+                div.innerText = text;
+            }
         }
     }
 
@@ -175,11 +178,16 @@ function containsShareButton(node) {
 }
 
 function onPageChanged(changes) {
-    if (guessQualityTimer === null) {
-        guessQualityTimer = setTimeout(() => {
-            calculateGuessQuality();
-            guessQualityTimer = null;
-        }, 100);
+    const wordleState = getWordleState();
+    if ((wordleState !== null) && (wordleState.lastPlayedTs !== lastPlayedTs)) {
+        lastPlayedTs = wordleState.lastPlayedTs;
+
+        if (guessQualityTimer === null) {
+            guessQualityTimer = setTimeout(() => {
+                calculateGuessQuality();
+                guessQualityTimer = null;
+            }, 100);
+        }
     }
 
     for (let change of changes) {
@@ -199,6 +207,7 @@ const mutationObserver = new MutationObserver(onPageChanged);
 mutationObserver.observe(document.body, { attributes: true, childList: true, subtree: true });
 
 let guessQualityTimer = null;
+let lastPlayedTs = null;
 
 const answerlist = ["cigar", "rebut", "sissy", "humph", "awake", "blush", "focal", "evade", "naval", "serve", "heath", "dwarf", "model", "karma", "stink",
     "grade", "quiet", "bench", "abate", "feign", "major", "death", "fresh", "crust", "stool", "colon", "abase", "marry", "react", "batty", "pride", "floss",
