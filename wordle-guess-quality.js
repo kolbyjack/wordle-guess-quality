@@ -19,7 +19,22 @@ function includesAll(haystack, needles) {
 
 function getWordleState() {
     try {
-        return JSON.parse(localStorage.getItem("nyt-wordle-state"));
+        const itemCount = localStorage.length;
+        let result = null;
+
+        for (let i = 0; i < itemCount; ++i) {
+            const key = localStorage.key(i);
+            if (!key.startsWith("nyt-wordle-moogle/")) {
+                continue;
+            }
+
+            const item = JSON.parse(localStorage.getItem(key));
+            if ((result === null) || (result.timestamp < item.timestamp)) {
+                result = item;
+            }
+        }
+
+        return result;
     } catch {
         return null;
     }
@@ -50,6 +65,34 @@ function getRows() {
     return result;
 }
 
+function evaluate(guess, answer) {
+    const result = [null, null, null, null, null];
+    const counts = {};
+    for (let c of answer) {
+        counts[c] = (counts[c] || 0) + 1;
+    }
+
+    for (let i in guess) {
+        if (guess[i] === answer[i]) {
+            result[i] = "correct";
+            --counts[guess[i]];
+        }
+    }
+
+    for (let i in guess) {
+        if (result[i] !== null) {
+            // Do nothing
+        } else if (counts[guess[i]] > 0) {
+            result[i] = "present";
+            --counts[guess[i]];
+        } else {
+            result[i] = "absent";
+        }
+    }
+
+    return result;
+}
+
 function calculateGuessQuality() {
     const wordleState = getWordleState();
     if (wordleState === null) {
@@ -63,7 +106,11 @@ function calculateGuessQuality() {
 
     let answersleft = answerlist.slice(0);
     let guessesleft = guesslist.slice(0);
-    for (let row = 0; row < wordleState.rowIndex; ++row) {
+    const answer = answerlist[wordleState.game.dayOffset];
+    const currentRow = wordleState.game.currentRowIndex;
+    const boardState = wordleState.game.boardState;
+    for (let row = 0; row < currentRow; ++row) {
+        const evaluations = evaluate(boardState[row], answer);
         let guess = "";
         let regex = "";
         let absent = [];
@@ -71,8 +118,8 @@ function calculateGuessQuality() {
         let correct = [];
 
         for (let col = 0; col < 5; ++col) {
-            const evaluation = wordleState.evaluations[row][col];
-            const letter = wordleState.boardState[row][col];
+            const evaluation = evaluations[col];
+            const letter = boardState[row][col];
 
             if (evaluation === "absent") {
                 regex += `[^%absent%${letter}]`;
@@ -147,11 +194,13 @@ function bindShareClick() {
                 if (lines.length > 2 && lines[0].startsWith("Wordle") && lines[1].length === 0) {
                     const statistics = document.getElementsByClassName("guessQuality");
 
-                    for (let i = 2; i + 1 < lines.length; ++i) {
-                        lines[i] += " " + statistics[i - 2].innerText;
-                    }
+                    if (statistics) {
+                        for (let i = 2; i + 1 < lines.length; ++i) {
+                            lines[i] += ` ${statistics[i - 2].innerText}`;
+                        }
 
-                    navigator.clipboard.writeText(lines.join("\r\n"));
+                        navigator.clipboard.writeText(lines.join("\r\n"));
+                    }
                 }
             })
             .catch((e) => {
@@ -179,8 +228,8 @@ function containsShareButton(node) {
 
 function onPageChanged(changes) {
     const wordleState = getWordleState();
-    if ((wordleState !== null) && (wordleState.lastPlayedTs !== lastPlayedTs)) {
-        lastPlayedTs = wordleState.lastPlayedTs;
+    if ((wordleState !== null) && (wordleState.timestamp !== timestamp)) {
+        timestamp = wordleState.timestamp;
 
         if (guessQualityTimer === null) {
             guessQualityTimer = setTimeout(() => {
@@ -207,7 +256,7 @@ const mutationObserver = new MutationObserver(onPageChanged);
 mutationObserver.observe(document.body, { attributes: true, childList: true, subtree: true });
 
 let guessQualityTimer = null;
-let lastPlayedTs = null;
+let timestamp = null;
 
 const answerlist = ["cigar", "rebut", "sissy", "humph", "awake", "blush", "focal", "evade", "naval", "serve", "heath", "dwarf", "model", "karma", "stink",
     "grade", "quiet", "bench", "abate", "feign", "major", "death", "fresh", "crust", "stool", "colon", "abase", "marry", "react", "batty", "pride", "floss",
