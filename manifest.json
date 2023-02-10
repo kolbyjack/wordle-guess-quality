@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Wordle Guess Quality",
-    "version": "1.12",
+    "version": "1.13",
 
     "description": "Show the number of words left after each guess",
     "icons": {

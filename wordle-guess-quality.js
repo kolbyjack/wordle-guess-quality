@@ -1,5 +1,9 @@
 "use strict";
 
+function isString(value) {
+    return (typeof value === "string" || value instanceof String);
+}
+
 function retry(func, period) {
     if (!func()) {
         setTimeout(() => { retry(func, period); }, period);
@@ -180,8 +184,7 @@ function resizeElements() {
     }
 }
 
-function bindShareClick() {
-    const button = document.getElementById("share-button");
+function bindShareClick(button) {
     if (button === null) {
         return false;
     }
@@ -212,18 +215,19 @@ function bindShareClick() {
     return true;
 }
 
-function containsShareButton(node) {
-    if (node.id === "share-button") {
-        return true;
+function findShareButton(node) {
+    if (isString(node.className) && node.className.includes("shareButton")) {
+        return node;
     }
 
     for (let child of node.childNodes) {
-        if (containsShareButton(child)) {
-            return true;
+        let result = findShareButton(child);
+        if (result !== null) {
+            return result;
         }
     }
 
-    return false;
+    return null;
 }
 
 function onPageLoaded() {
@@ -253,8 +257,9 @@ function onPageChanged(changes) {
 
     for (let change of changes) {
         for (let node of change.addedNodes) {
-            if (containsShareButton(node)) {
-                retry(bindShareClick, 250);
+            const shareButton = findShareButton(node);
+            if (shareButton !== null) {
+                bindShareClick(shareButton);
                 return;
             }
         }
