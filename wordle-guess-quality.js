@@ -109,10 +109,10 @@ function calculateGuessQuality() {
     }
 
     let answersleft = answerlist.slice(0);
-    let guessesleft = guesslist.slice(0);
     const answer = answerlist[wordleState.game.id - 1];
     const currentRow = wordleState.game.currentRowIndex;
     const boardState = wordleState.game.boardState;
+    console.log("wordleState", wordleState, "answer", answer);
     for (let row = 0; row < currentRow; ++row) {
         const evaluations = evaluate(boardState[row], answer);
         let guess = "";
@@ -141,10 +141,8 @@ function calculateGuessQuality() {
         absent = absent.filter(letter => !present.includes(letter)).join("");
 
         if (regex.length > 5) {
-            const guessmark = (answerlist.indexOf(guess) !== -1) ? "" : "*"
             regex = new RegExp(regex.replaceAll("%absent%", absent));
             answersleft = answersleft.filter(w => w.match(regex) && includesAll(w, present));
-            guessesleft = guessesleft.filter(w => w.match(regex) && includesAll(w, present));
 
             let div = rows[row].querySelector("div.guessQuality");
             if (div === null) {
@@ -160,7 +158,7 @@ function calculateGuessQuality() {
                 rows[row].appendChild(div);
             }
 
-            const text = `${answersleft.length} (+${guessesleft.length}) ${guessmark}`.trim();
+            const text = `${answersleft.length}`;
             if (div.innerText !== text) {
                 div.innerText = text;
             }
@@ -231,14 +229,7 @@ function findShareButton(node) {
 }
 
 function onPageLoaded() {
-    for (let i = 1; i < wordlist.length; ++i) {
-        if (wordlist[i - 1].localeCompare(wordlist[i]) > 0) {
-            guesslist = wordlist.slice(0, i);
-            answerlist = wordlist.slice(i);
-            break;
-        }
-    }
-
+    answerlist = wordlist.slice(0);
     retry(calculateGuessQuality, 250);
 }
 
@@ -275,7 +266,6 @@ mutationObserver.observe(document.body, { attributes: true, childList: true, sub
 let guessQualityTimer = null;
 let timestamp = null;
 let answerlist = null;
-let guesslist = null;
 
 // Formatted by https://beautifier.io/
 const wordlist = ["aahed", "aalii", "aapas", "aargh", "aarti", "abaca", "abaci", "abacs", "abaft", "abaht", "abaka", "abamp", "aband", "abash", "abask",
