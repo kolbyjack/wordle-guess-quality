@@ -4,9 +4,18 @@ function isString(value) {
     return (typeof value === "string" || value instanceof String);
 }
 
-function retry(func, period) {
-    if (!func()) {
-        setTimeout(() => { retry(func, period); }, period);
+function retry(func, period, success) {
+    let succeeded = false;
+    try {
+        succeeded = func();
+    } catch (e) {
+        console.log("caught exception", e);
+    }
+
+    if (!succeeded) {
+        setTimeout(() => { retry(func, period, success); }, period);
+    } else if (success) {
+        success();
     }
 }
 
@@ -19,29 +28,6 @@ function includesAll(haystack, needles) {
         haystack = haystack.slice(0, needleIndex) + haystack.slice(needleIndex + 1);
     }
     return true;
-}
-
-function getWordleState() {
-    try {
-        const itemCount = localStorage.length;
-        let result = null;
-
-        for (let i = 0; i < itemCount; ++i) {
-            const key = localStorage.key(i);
-            if (!key.startsWith("nyt-wordle-moogle/")) {
-                continue;
-            }
-
-            const item = JSON.parse(localStorage.getItem(key));
-            if ((result === null) || (result.timestamp < item.timestamp)) {
-                result = item;
-            }
-        }
-
-        return result;
-    } catch {
-        return null;
-    }
 }
 
 function findBoard() {
@@ -69,40 +55,7 @@ function getRows() {
     return result;
 }
 
-function evaluate(guess, answer) {
-    const result = [null, null, null, null, null];
-    const counts = {};
-    for (let c of answer) {
-        counts[c] = (counts[c] || 0) + 1;
-    }
-
-    for (let i in guess) {
-        if (guess[i] === answer[i]) {
-            result[i] = "correct";
-            --counts[guess[i]];
-        }
-    }
-
-    for (let i in guess) {
-        if (result[i] !== null) {
-            // Do nothing
-        } else if (counts[guess[i]] > 0) {
-            result[i] = "present";
-            --counts[guess[i]];
-        } else {
-            result[i] = "absent";
-        }
-    }
-
-    return result;
-}
-
 function calculateGuessQuality() {
-    const wordleState = getWordleState();
-    if (wordleState === null) {
-        return true;
-    }
-
     const rows = getRows();
     if (rows.length !== 6) {
         return false;
@@ -110,21 +63,25 @@ function calculateGuessQuality() {
 
     let answersleft = answerlist.slice(0);
     let guessesleft = guesslist.slice(0);
-    const answer = answerlist[wordleState.game.id - 1];
-    const currentRow = wordleState.game.currentRowIndex;
-    const boardState = wordleState.game.boardState;
-    for (let row = 0; row < currentRow; ++row) {
-        const evaluations = evaluate(boardState[row], answer);
+    for (let row of rows) {
         let guess = "";
         let regex = "";
         let absent = [];
         let present = [];
         let correct = [];
 
-        for (let col = 0; col < 5; ++col) {
-            const evaluation = evaluations[col];
-            const letter = boardState[row][col];
+        for (let tileContainer of row.children) {
+            if (tileContainer.className === "guessQuality") {
+                continue;
+            }
 
+            const tile = tileContainer.firstChild;
+            const evaluation = tile.getAttribute("data-state");
+            if (evaluation === "tbd") {
+                return true;
+            }
+
+            const letter = tile.innerText.toLowerCase();
             if (evaluation === "absent") {
                 regex += `[^%absent%${letter}]`;
                 absent.push(letter);
@@ -146,9 +103,9 @@ function calculateGuessQuality() {
             answersleft = answersleft.filter(w => w.match(regex) && includesAll(w, present));
             guessesleft = guessesleft.filter(w => w.match(regex) && includesAll(w, present));
 
-            let div = rows[row].querySelector("div.guessQuality");
+            let div = row.querySelector("div.guessQuality");
             if (div === null) {
-                const rowRect = rows[row].getBoundingClientRect();
+                const rowRect = row.getBoundingClientRect();
                 div = document.createElement("div");
                 div.className = "guessQuality";
                 div.style.position = "fixed";
@@ -157,7 +114,7 @@ function calculateGuessQuality() {
                 div.style.height = `${rowRect.bottom - rowRect.top}px`;
                 div.style["line-height"] = div.style.height;
                 div.style.color = "var(--key-text-color)";
-                rows[row].appendChild(div);
+                row.appendChild(div);
             }
 
             const text = `${answersleft.length} (+${guessesleft.length}) ${guessmark}`.trim();
@@ -243,16 +200,10 @@ function onPageLoaded() {
 }
 
 function onPageChanged(changes) {
-    const wordleState = getWordleState();
-    if ((wordleState !== null) && (wordleState.timestamp !== timestamp)) {
-        timestamp = wordleState.timestamp;
-
-        if (guessQualityTimer === null) {
-            guessQualityTimer = setTimeout(() => {
-                calculateGuessQuality();
-                guessQualityTimer = null;
-            }, 100);
-        }
+    if (guessQualityTimer === null) {
+        guessQualityTimer = setTimeout(() => {
+            retry(calculateGuessQuality, 100, () => guessQualityTimer = null);
+        }, 100);
     }
 
     for (let change of changes) {
