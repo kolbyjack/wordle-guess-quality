@@ -55,33 +55,78 @@ function getRows() {
     return result;
 }
 
-function calculateGuessQuality() {
+function getBoardState() {
     const rows = getRows();
     if (rows.length !== 6) {
-        return false;
+        return null;
     }
 
-    let answersleft = answerlist.slice(0);
-    let guessesleft = guesslist.slice(0);
-    for (let row of rows) {
-        let guess = "";
-        let regex = "";
-        let absent = [];
-        let present = [];
-        let correct = [];
+    const result = [];
+    for (let element of rows) {
+        const state = [];
 
-        for (let tileContainer of row.children) {
+        for (let tileContainer of element.children) {
             if (tileContainer.className === "guessQuality") {
                 continue;
             }
 
             const tile = tileContainer.firstChild;
             const evaluation = tile.getAttribute("data-state");
+            const letter = tile.innerText.toLowerCase();
+            state.push({ evaluation: evaluation, letter: letter });
+        }
+
+        if (state.length !== 5) {
+            return null;
+        }
+        result.push({ element: element, state: state });
+    }
+
+    return result;
+}
+
+function getGuessQualityElement(rowElement) {
+    let div = row.querySelector("div.guessQuality");
+
+    if (div === null) {
+        const rowRect = row.getBoundingClientRect();
+        div = document.createElement("div");
+        div.className = "guessQuality";
+        div.style.position = "fixed";
+        div.style.left = `${rowRect.right + 10}px`;
+        div.style.top = `${rowRect.top}px`;
+        div.style.height = `${rowRect.bottom - rowRect.top}px`;
+        div.style["line-height"] = div.style.height;
+        div.style.color = "var(--key-text-color)";
+        row.appendChild(div);
+    }
+
+    return div;
+}
+
+function calculateGuessQuality() {
+    const boardState = getBoardState();
+    if (boardState === null) {
+        return false;
+    }
+    console.log("boardState", boardState);
+
+    let answersleft = answerlist.slice(0);
+    let guessesleft = guesslist.slice(0);
+    for (let row of boardState) {
+        let guess = "";
+        let regex = "";
+        let absent = [];
+        let present = [];
+        let correct = [];
+
+        for (let tile of row.state) {
+            const evaluation = tile.evaluation;
             if (evaluation === "tbd") {
                 return true;
             }
 
-            const letter = tile.innerText.toLowerCase();
+            const letter = tile.letter;
             if (evaluation === "absent") {
                 regex += `[^%absent%${letter}]`;
                 absent.push(letter);
@@ -103,20 +148,7 @@ function calculateGuessQuality() {
             answersleft = answersleft.filter(w => w.match(regex) && includesAll(w, present));
             guessesleft = guessesleft.filter(w => w.match(regex) && includesAll(w, present));
 
-            let div = row.querySelector("div.guessQuality");
-            if (div === null) {
-                const rowRect = row.getBoundingClientRect();
-                div = document.createElement("div");
-                div.className = "guessQuality";
-                div.style.position = "fixed";
-                div.style.left = `${rowRect.right + 10}px`;
-                div.style.top = `${rowRect.top}px`;
-                div.style.height = `${rowRect.bottom - rowRect.top}px`;
-                div.style["line-height"] = div.style.height;
-                div.style.color = "var(--key-text-color)";
-                row.appendChild(div);
-            }
-
+            const div = getGuessQualityElement(row.element);
             const text = `${answersleft.length} (+${guessesleft.length}) ${guessmark}`.trim();
             if (div.innerText !== text) {
                 div.innerText = text;
