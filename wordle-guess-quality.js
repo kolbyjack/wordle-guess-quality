@@ -85,7 +85,7 @@ function getBoardState() {
     return result;
 }
 
-function getGuessQualityElement(rowElement) {
+function getGuessQualityElement(row) {
     let div = row.querySelector("div.guessQuality");
 
     if (div === null) {
@@ -109,7 +109,6 @@ function calculateGuessQuality() {
     if (boardState === null) {
         return false;
     }
-    console.log("boardState", boardState);
 
     let answersleft = answerlist.slice(0);
     let guessesleft = guesslist.slice(0);
